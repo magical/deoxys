@@ -1,5 +1,10 @@
 package deoxys
 
+import (
+	"crypto/subtle"
+	"errors"
+)
+
 const (
 	tagNonce          = 1 << 4
 	tagAdditionalData = 2 << 4
@@ -10,6 +15,7 @@ const (
 const padByte byte = 0x80
 
 const (
+	blockSize = 16
 	NonceSize = 16 // 15?
 	TagSize   = 16
 )
@@ -40,7 +46,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 
 	// hash the additional data to get an auth tag
 	counter[len(counter)-1] = tagAdditionalData
-	for len(additionalData) > 0 {
+	for len(additionalData) >= 16 {
 		c.encrypt(additionalData[:16], out, counter)
 		additionalData = additionalData[16:]
 		xor(auth, out)
@@ -86,7 +92,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	// encrypt the message
 	// using the auth tag as an IV
 	copy(counter, auth)
-	counter[len(auth)-1] |= 0x80
+	counter[len(counter)-1] |= 0x80
 	p = plaintext
 	for len(p) >= 16 {
 		c.encrypt(nonce, out, counter)
@@ -94,6 +100,11 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 		xor(out, p[:16])
 		p = p[16:]
 		dst = append(dst, out...)
+	}
+	if len(p) > 0 {
+		c.encrypt(nonce, out, counter)
+		xor(out, p)
+		dst = append(dst, out[:len(p)]...)
 	}
 
 	// append the tag
@@ -104,6 +115,95 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 
 // Open authenticates the ciphertext and additional data and returns the decrypted plaintext.
 func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
+	var c cipher
+
+	c.expand(m.key)
+
+	counter := make([]byte, 16)
+	out := make([]byte, 16)
+	auth := make([]byte, TagSize)
+	pad := make([]byte, 16)
+
+	if len(ciphertext) < TagSize {
+		return dst, errors.New("Open: ciphertext too short")
+	}
+
+	tag := ciphertext[len(ciphertext)-TagSize:]
+	ciphertext = ciphertext[:len(ciphertext)-TagSize]
+
+	origLen := len(dst)
+
+	// decrypt
+	// using the auth tag as an IV
+	copy(counter, tag)
+	counter[len(counter)-1] |= 0x80
+	p := ciphertext
+	for len(p) >= blockSize {
+		c.encrypt(nonce, out, counter)
+		inc(counter)
+		xor(out, p[:blockSize])
+		p = p[blockSize:]
+		dst = append(dst, out...)
+	}
+	if len(p) > 0 {
+		c.encrypt(nonce, out, counter)
+		xor(out, p)
+		dst = append(dst, out[:len(p)]...)
+	}
+
+	// hash the additional data to get an auth tag
+	for i := range counter {
+		counter[i] = 0
+	}
+	counter[len(counter)-1] = tagAdditionalData
+	p = dst[origLen:]
+	for len(additionalData) >= blockSize {
+		c.encrypt(additionalData[:blockSize], out, counter)
+		additionalData = additionalData[blockSize:]
+		xor(auth, out)
+		inc(counter)
+	}
+	if len(additionalData) > 0 {
+		counter[len(counter)-1] |= tagPadding
+		n := copy(pad, additionalData)
+		pad[n] = padByte
+		c.encrypt(pad, out, counter)
+		xor(auth, out)
+		inc(counter)
+	}
+
+	// reset the counter
+	// hash the message to get another auth tag
+	for i := range counter {
+		counter[i] = 0
+	}
+	counter[len(counter)-1] = tagMessage
+
+	p = dst[origLen:]
+	for len(p) >= blockSize {
+		c.encrypt(p[:blockSize], out, counter)
+		p = p[blockSize:]
+		xor(auth, out)
+		inc(counter)
+	}
+	if len(p) > 0 {
+		counter[len(counter)-1] |= tagPadding
+		n := copy(pad, p)
+		pad[n] = padByte
+		c.encrypt(pad, out, counter)
+		xor(auth, out)
+	}
+
+	// encrypt the nonce to get the final tag
+	// XXX don't modify the nonce
+	nonce[15] = tagNonce
+	c.encrypt(nonce, out, counter)
+	xor(auth, out)
+
+	if subtle.ConstantTimeCompare(auth, tag) == 0 {
+		return dst, errors.New("Open: invalid tag")
+	}
+
 	return dst, nil
 }
 
