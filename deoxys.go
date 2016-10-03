@@ -1,6 +1,11 @@
+// Package deoxys implements the Deoxys-BC block cipher
+// and Deoxys-II nonce-misuse-resistant authenticated encryption mode.
+//
+// Deoxys 1.4 Specification:
+//
+//     http://www1.spms.ntu.edu.sg/~syllab/m/images/8/87/Deoxys.v1.4.pdf
+//
 package deoxys
-
-import "fmt"
 
 // AES Sbox
 var sbox = [256]uint8{
@@ -22,7 +27,6 @@ var sbox = [256]uint8{
 	0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 }
 
-//var m = [7]uint8{1, 1, 3, 2, 1, 1, 3}
 var m = [7]uint8{3, 1, 1, 2, 3, 1, 1}
 var rc = [17]uint8{0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72}
 
@@ -36,6 +40,9 @@ type cipher struct {
 
 func (c *cipher) expand(key []byte) {
 	var tk1 [16]uint8
+	if len(key) != 16 {
+		panic("wrong size key")
+	}
 	copy(tk1[:], key[0:16])
 	for i := range c.subkey {
 		c.subkey[i] = tk1
@@ -96,13 +103,12 @@ func round(c *cipher, k, tw *[16]byte, rc uint8) {
 		v := uint8(0)
 		y := uint8(i) >> 2
 		x := uint8(i) & 3
-		fmt.Printf("s[%d, %d] =", y, x)
+		//fmt.Printf("s[%d, %d] =", y, x)
 		for j := uint8(0); j < 4; j++ {
-			fmt.Printf(" s[%d, %d]*%d", j, x, m[3-y+j])
-			//fmt.Println(x, y, j, m[3-y+j], j*4+x)
+			//fmt.Printf(" s[%d, %d]*%d", j, x, m[3-y+j])
 			v ^= uint8(mul(uint(m[3-y+j]), uint(s[j*4+x])))
 		}
-		fmt.Printf("\n")
+		//fmt.Printf("\n")
 		t[i] = v
 	}
 	*s = t

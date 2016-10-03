@@ -1,6 +1,9 @@
 package deoxys
 
-import "testing"
+import (
+	"encoding/hex"
+	"testing"
+)
 
 func TestDeoxys(t *testing.T) {
 	var c cipher
@@ -10,8 +13,11 @@ func TestDeoxys(t *testing.T) {
 	out := make([]byte, 16)
 	c.expand(key)
 	c.encrypt(msg, out, tweak)
-	t.Errorf("% x", c)
-	t.Errorf("% x", out)
+	actual := hex.EncodeToString(out)
+	expected := "80b2311e3129c07c386da385e79a4886"
+	if actual != expected {
+		t.Errorf("got %s, expected %s", actual, expected)
+	}
 }
 
 func TestMul(t *testing.T) {
