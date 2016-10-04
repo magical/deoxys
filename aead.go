@@ -94,10 +94,10 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 		xor(auth, out)
 	}
 
-	// encrypt the nonce to get the final tag
-	tmp := []byte{tagNonce}
-	tmp = append(tmp, nonce[:15]...)
-	m.encrypt(tmp, auth, counter)
+	// encrypt the auth with the nonce as tweak to get the final tag
+	counter[0] = tagNonce
+	copy(counter[1:], nonce)
+	m.encrypt(auth, auth, counter)
 
 	// encrypt the message
 	// using the auth tag as an IV
@@ -205,11 +205,10 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 		xor(auth, out)
 	}
 
-	// encrypt the nonce to get the final tag
-	// XXX don't allocate
-	tmp := []byte{tagNonce}
-	tmp = append(tmp, nonce[:15]...)
-	m.encrypt(tmp, auth, counter)
+	// encrypt the auth with the nonce as tweak to get the final tag
+	counter[0] = tagNonce
+	copy(counter[1:], nonce)
+	m.encrypt(auth, auth, counter)
 
 	if subtle.ConstantTimeCompare(auth, tag) == 0 {
 		return dst, errors.New("Open: invalid tag")
