@@ -105,20 +105,13 @@ func round(s *[16]byte, k, tw *[16]byte, rc uint8) {
 	s[12], s[13], s[14], s[15] = s[15], s[12], s[13], s[14]
 
 	// mixcolumns
-	var t [16]uint8
-	for i := range t {
-		v := uint8(0)
-		y := uint8(i) >> 2
-		x := uint8(i) & 3
-		//fmt.Printf("s[%d, %d] =", y, x)
-		for j := uint8(0); j < 4; j++ {
-			//fmt.Printf(" s[%d, %d]*%d", j, x, m[3-y+j])
-			v ^= uint8(mul(uint(m[3-y+j]), uint(s[j*4+x])))
-		}
-		//fmt.Printf("\n")
-		t[i] = v
+	for i := 0; i < 4; i++ {
+		s0, s1, s2, s3 := s[i], s[i+4], s[i+8], s[i+12]
+		s[i+0] = uint8(mul(2, uint(s0))) ^ uint8(mul(3, uint(s1))) ^ s2 ^ s3
+		s[i+4] = uint8(mul(2, uint(s1))) ^ uint8(mul(3, uint(s2))) ^ s3 ^ s0
+		s[i+8] = uint8(mul(2, uint(s2))) ^ uint8(mul(3, uint(s3))) ^ s0 ^ s1
+		s[i+12] = uint8(mul(2, uint(s3))) ^ uint8(mul(3, uint(s0))) ^ s1 ^ s2
 	}
-	*s = t
 }
 
 func mul(a, b uint) uint {
