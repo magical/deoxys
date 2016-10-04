@@ -67,50 +67,54 @@ func expandKey(key []byte, subkey [][16]uint8) {
 }
 
 func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
-	var state [16]uint8
+	var s [16]uint8
 	var tw [16]uint8
 	copy(tw[:], tweak[0:16])
-	for i := range state {
-		state[i] = in[swap(i)]
+	for i := range s {
+		s[i] = in[swap(i)]
 	}
-	copy(state[:], in)
-	for i := range subkey[:len(subkey)-1] {
-		round(&state, &subkey[i], &tw, rc[i])
+	copy(s[:], in) // FIXME
+	for r := range subkey[:len(subkey)-1] {
+		k := &subkey[r]
+
+		// Add tweakey
+		for i := range s {
+			s[i] ^= k[i] ^ tw[i]
+		}
+
+		// subbytes
+		for i, v := range s {
+			s[i] = sbox[v]
+		}
+
+		// shiftrows
+		s[4], s[5], s[6], s[7] = s[5], s[6], s[7], s[4]
+		s[8], s[9], s[10], s[11] = s[10], s[11], s[8], s[9]
+		s[12], s[13], s[14], s[15] = s[15], s[12], s[13], s[14]
+
+		// mixcolumns
+		for i := 0; i < 4; i++ {
+			s0, s1, s2, s3 := s[i], s[i+4], s[i+8], s[i+12]
+			s[i+0] = mul2(s0) ^ mul3(s1) ^ s2 ^ s3
+			s[i+4] = mul2(s1) ^ mul3(s2) ^ s3 ^ s0
+			s[i+8] = mul2(s2) ^ mul3(s3) ^ s0 ^ s1
+			s[i+12] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
+		}
+
+		// update tweak
 		tw = h(tw)
 	}
 	// Add tweakey
-	for i := range state {
-		state[i] ^= subkey[len(subkey)-1][i] ^ tw[i]
+	for i := range s {
+		s[i] ^= subkey[len(subkey)-1][i] ^ tw[i]
 	}
+
 	for i := range out {
-		out[i] = state[swap(i)]
+		out[i] = s[swap(i)]
 	}
 }
 
 func round(s *[16]byte, k, tw *[16]byte, rc uint8) {
-	// Add tweakey
-	for i := range s {
-		s[i] ^= k[i] ^ tw[i]
-	}
-
-	// subbytes
-	for i, v := range *s {
-		s[i] = sbox[v]
-	}
-
-	// shiftrows
-	s[4], s[5], s[6], s[7] = s[5], s[6], s[7], s[4]
-	s[8], s[9], s[10], s[11] = s[10], s[11], s[8], s[9]
-	s[12], s[13], s[14], s[15] = s[15], s[12], s[13], s[14]
-
-	// mixcolumns
-	for i := 0; i < 4; i++ {
-		s0, s1, s2, s3 := s[i], s[i+4], s[i+8], s[i+12]
-		s[i+0] = mul2(s0) ^ mul3(s1) ^ s2 ^ s3
-		s[i+4] = mul2(s1) ^ mul3(s2) ^ s3 ^ s0
-		s[i+8] = mul2(s2) ^ mul3(s3) ^ s0 ^ s1
-		s[i+12] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
-	}
 }
 
 func mul2(x uint8) uint8 {
