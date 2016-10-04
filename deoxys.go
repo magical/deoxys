@@ -74,13 +74,16 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 		s[i] = in[swap(i)]
 	}
 	copy(s[:], in) // FIXME
-	for r := range subkey[:len(subkey)-1] {
+
+	// Add tweakey
+	for i := range s {
+		s[i] ^= subkey[0][i] ^ tw[i]
+	}
+	for r := 1; r < len(subkey); r++ {
 		k := &subkey[r]
 
-		// Add tweakey
-		for i := range s {
-			s[i] ^= k[i] ^ tw[i]
-		}
+		// update tweak
+		tw = h(tw)
 
 		// subbytes
 		for i, v := range s {
@@ -101,12 +104,10 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 			s[i+12] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
 		}
 
-		// update tweak
-		tw = h(tw)
-	}
-	// Add tweakey
-	for i := range s {
-		s[i] ^= subkey[len(subkey)-1][i] ^ tw[i]
+		// Add tweakey
+		for i := range s {
+			s[i] ^= k[i] ^ tw[i]
+		}
 	}
 
 	for i := range out {
