@@ -23,6 +23,7 @@ const padByte byte = 0x80
 
 const (
 	blockSize = 16
+	numRounds = 15
 	NonceSize = 16 // 15?
 	TagSize   = 16
 )
@@ -31,7 +32,7 @@ const (
 type mode struct {
 	key    []byte
 	state  [16]uint8
-	subkey [rounds + 1][16]uint8
+	subkey [numRounds][16]uint8
 }
 
 func (m *mode) NonceSize() int {

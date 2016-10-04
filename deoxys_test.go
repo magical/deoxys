@@ -10,7 +10,7 @@ func TestDeoxys(t *testing.T) {
 	tweak := make([]byte, 16)
 	msg := make([]byte, 16)
 	out := make([]byte, 16)
-	subkey := make([][16]byte, rounds+1)
+	subkey := make([][16]byte, numRounds)
 
 	expandKey(key, subkey)
 	encrypt(subkey, tweak, msg, out)

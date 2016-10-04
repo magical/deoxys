@@ -42,7 +42,6 @@ var permutations = [8][16]int8{
 }
 
 const poly = 0x11b
-const rounds = 14
 
 // ExpandKey expands a 16-byte key into a
 // number of subkeys
@@ -76,13 +75,13 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 		state[i] = in[swap(i)]
 	}
 	copy(state[:], in)
-	for i := range subkey[:rounds] {
+	for i := range subkey[:len(subkey)-1] {
 		round(&state, &subkey[i], &tw, rc[i])
 		tw = h(tw)
 	}
 	// Add tweakey
 	for i := range state {
-		state[i] ^= subkey[rounds][i] ^ tw[i]
+		state[i] ^= subkey[len(subkey)-1][i] ^ tw[i]
 	}
 	for i := range out {
 		out[i] = state[swap(i)]
