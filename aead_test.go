@@ -2,6 +2,7 @@ package deoxys
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -10,12 +11,12 @@ func TestAEAD(t *testing.T) {
 	m.key = []byte("16-byte password")
 	msg := []byte("A witty saying means nothing.")
 	nonce := make([]byte, 16)
-	t.Errorf("%x", m.Seal(nil, nonce, msg, nil))
-	t.Errorf("%x", m.Seal(nil, nonce, msg, nil))
+	fmt.Printf("%x\n", m.Seal(nil, nonce, msg, nil))
+	fmt.Printf("%x\n", m.Seal(nil, nonce, msg, nil))
 	m.key[0]++
-	t.Errorf("%x", m.Seal(nil, nonce, msg, nil))
+	fmt.Printf("%x\n", m.Seal(nil, nonce, msg, nil))
 	m.key[0]--
-	t.Errorf("%x", m.Seal(nil, nonce, msg[:len(msg)-1], nil))
+	fmt.Printf("%x\n", m.Seal(nil, nonce, msg[:len(msg)-1], nil))
 }
 
 func TestRoundTrip(t *testing.T) {
