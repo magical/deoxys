@@ -67,13 +67,14 @@ func expandKey(key []byte, subkey [][16]uint8) {
 }
 
 func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
-	var s [16]uint8
 	var tw [16]uint8
-	copy(tw[:], tweak[0:16])
+	copy(tw[:], tweak) // XXX swap?
+
+	// Initialize state
+	var s [16]uint8
 	for i := range s {
 		s[i] = in[swap(i)]
 	}
-	copy(s[:], in) // FIXME
 
 	// Add tweakey
 	for i := range s {
@@ -113,9 +114,6 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 	for i := range out {
 		out[i] = s[swap(i)]
 	}
-}
-
-func round(s *[16]byte, k, tw *[16]byte, rc uint8) {
 }
 
 func mul2(x uint8) uint8 {

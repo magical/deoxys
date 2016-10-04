@@ -20,6 +20,15 @@ func TestDeoxys(t *testing.T) {
 	if actual != expected {
 		t.Errorf("got %s, expected %s", actual, expected)
 	}
+
+	msg[1] = 0xff
+	encrypt(subkey, tweak, msg, out)
+
+	actual = hex.EncodeToString(out)
+	expected = "1bdfc9a6c16149ac337d959724c4142b"
+	if actual != expected {
+		t.Errorf("got %s, expected %s", actual, expected)
+	}
 }
 
 func TestMul(t *testing.T) {
