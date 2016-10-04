@@ -107,26 +107,24 @@ func round(s *[16]byte, k, tw *[16]byte, rc uint8) {
 	// mixcolumns
 	for i := 0; i < 4; i++ {
 		s0, s1, s2, s3 := s[i], s[i+4], s[i+8], s[i+12]
-		s[i+0] = uint8(mul(2, uint(s0))) ^ uint8(mul(3, uint(s1))) ^ s2 ^ s3
-		s[i+4] = uint8(mul(2, uint(s1))) ^ uint8(mul(3, uint(s2))) ^ s3 ^ s0
-		s[i+8] = uint8(mul(2, uint(s2))) ^ uint8(mul(3, uint(s3))) ^ s0 ^ s1
-		s[i+12] = uint8(mul(2, uint(s3))) ^ uint8(mul(3, uint(s0))) ^ s1 ^ s2
+		s[i+0] = mul2(s0) ^ mul3(s1) ^ s2 ^ s3
+		s[i+4] = mul2(s1) ^ mul3(s2) ^ s3 ^ s0
+		s[i+8] = mul2(s2) ^ mul3(s3) ^ s0 ^ s1
+		s[i+12] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
 	}
 }
 
-func mul(a, b uint) uint {
-	var r uint
-	for a > 0 {
-		if a&1 != 0 {
-			r ^= b
-		}
-		a >>= 1
-		b <<= 1
-		if b >= 0x100 {
-			b ^= poly
-		}
-	}
-	return r
+func mul2(x uint8) uint8 {
+	t := int32(x) << 1
+	t ^= poly & (t << 23 >> 31)
+	return uint8(t)
+}
+
+func mul3(x uint8) uint8 {
+	t := int32(x)
+	t ^= t << 1
+	t ^= poly & (t << 23 >> 31)
+	return uint8(t)
 }
 
 func h(p [16]uint8) [16]uint8 {

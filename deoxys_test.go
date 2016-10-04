@@ -38,3 +38,38 @@ func TestMul(t *testing.T) {
 		}
 	}
 }
+
+func TestMul2(t *testing.T) {
+	for x := 0; x < 256; x++ {
+		got := uint(mul2(uint8(x)))
+		want := mul(2, uint(x))
+		if got != want {
+			t.Errorf("mul2(%d) = %d, expected %d", x, got, want)
+		}
+	}
+}
+
+func TestMul3(t *testing.T) {
+	for x := 0; x < 256; x++ {
+		got := uint(mul3(uint8(x)))
+		want := mul(3, uint(x))
+		if got != want {
+			t.Errorf("mul3(%d) = %d, expected %d", x, got, want)
+		}
+	}
+}
+
+func mul(a, b uint) uint {
+	var r uint
+	for a > 0 {
+		if a&1 != 0 {
+			r ^= b
+		}
+		a >>= 1
+		b <<= 1
+		if b >= 0x100 {
+			b ^= poly
+		}
+	}
+	return r
+}
