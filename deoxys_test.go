@@ -6,13 +6,15 @@ import (
 )
 
 func TestDeoxys(t *testing.T) {
-	var c cipher
 	key := make([]byte, 16)
 	tweak := make([]byte, 16)
 	msg := make([]byte, 16)
 	out := make([]byte, 16)
-	c.expand(key)
-	c.encrypt(msg, out, tweak)
+	subkey := make([][16]byte, rounds+1)
+
+	expandKey(key, subkey)
+	encrypt(subkey, tweak, msg, out)
+
 	actual := hex.EncodeToString(out)
 	expected := "80b2311e3129c07c386da385e79a4886"
 	if actual != expected {

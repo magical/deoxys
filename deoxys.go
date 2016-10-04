@@ -44,61 +44,58 @@ var permutations = [8][16]int8{
 const poly = 0x11b
 const rounds = 14
 
-type cipher struct {
-	state  [16]uint8
-	subkey [rounds + 1][16]uint8
-}
-
-func (c *cipher) expand(key []byte) {
+// ExpandKey expands a 16-byte key into a
+// number of subkeys
+func expandKey(key []byte, subkey [][16]uint8) {
 	var tk1 [16]uint8
 	if len(key) != 16 {
 		panic("wrong size key")
 	}
 	copy(tk1[:], key[0:16])
-	for i := range c.subkey {
-		c.subkey[i] = tk1
-		c.subkey[i][0] ^= 1
-		c.subkey[i][4] ^= 2
-		c.subkey[i][8] ^= 4
-		c.subkey[i][12] ^= 8
-		c.subkey[i][1] ^= rc[i]
-		c.subkey[i][5] ^= rc[i]
-		c.subkey[i][9] ^= rc[i]
-		c.subkey[i][13] ^= rc[i]
+	for i := range subkey {
+		subkey[i] = tk1
+		subkey[i][0] ^= 1
+		subkey[i][4] ^= 2
+		subkey[i][8] ^= 4
+		subkey[i][12] ^= 8
+		subkey[i][1] ^= rc[i]
+		subkey[i][5] ^= rc[i]
+		subkey[i][9] ^= rc[i]
+		subkey[i][13] ^= rc[i]
 		for j, v := range h(tk1) {
 			tk1[j] = v<<1 | v>>7 | (v>>5)&1
 		}
 	}
 }
 
-func (c *cipher) encrypt(in, out, tweak []byte) {
+func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
+	var state [16]uint8
 	var tw [16]uint8
 	copy(tw[:], tweak[0:16])
-	for i := range c.state {
-		c.state[i] = in[swap(i)]
+	for i := range state {
+		state[i] = in[swap(i)]
 	}
-	copy(c.state[:], in)
-	for i := range c.subkey[:rounds] {
-		round(c, &c.subkey[i], &tw, rc[i])
+	copy(state[:], in)
+	for i := range subkey[:rounds] {
+		round(&state, &subkey[i], &tw, rc[i])
 		tw = h(tw)
 	}
 	// Add tweakey
-	for i := range c.state {
-		c.state[i] ^= c.subkey[rounds][i] ^ tw[i]
+	for i := range state {
+		state[i] ^= subkey[rounds][i] ^ tw[i]
 	}
 	for i := range out {
-		out[i] = c.state[swap(i)]
+		out[i] = state[swap(i)]
 	}
 }
 
-func round(c *cipher, k, tw *[16]byte, rc uint8) {
+func round(s *[16]byte, k, tw *[16]byte, rc uint8) {
 	// Add tweakey
-	for i := range c.state {
-		c.state[i] ^= k[i] ^ tw[i]
+	for i := range s {
+		s[i] ^= k[i] ^ tw[i]
 	}
 
 	// subbytes
-	s := &c.state
 	for i, v := range *s {
 		s[i] = sbox[v]
 	}

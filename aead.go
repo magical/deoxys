@@ -3,8 +3,8 @@ package deoxys
 /*
 Potential optimizations:
 
-the third parameter of c.encrypt is always counter
-the output of c.encrypt is almost always immediately xored with something
+the third parameter of m.encrypt is always counter
+the output of m.encrypt is almost always immediately xored with something
 */
 
 import (
@@ -29,7 +29,9 @@ const (
 
 // Mode implements SCT (Synthetic Counter in Tweak) mode for Deoxys-BC
 type mode struct {
-	key []byte
+	key    []byte
+	state  [16]uint8
+	subkey [rounds + 1][16]uint8
 }
 
 func (m *mode) NonceSize() int {
@@ -42,9 +44,7 @@ func (m *mode) Overhead() int {
 
 // Seal encrypts and authenticates the plaintext
 func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
-	var c cipher
-
-	c.expand(m.key)
+	expandKey(m.key, m.subkey[:])
 
 	counter := make([]byte, 16)
 	out := make([]byte, 16)
@@ -54,7 +54,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	// hash the additional data to get an auth tag
 	counter[0] = tagAdditionalData
 	for len(additionalData) >= 16 {
-		c.encrypt(additionalData[:16], out, counter)
+		m.encrypt(additionalData[:16], out, counter)
 		additionalData = additionalData[16:]
 		xor(auth, out)
 		inc(counter)
@@ -63,7 +63,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 		counter[0] |= tagPadding
 		n := copy(pad, additionalData)
 		pad[n] = padByte
-		c.encrypt(pad, out, counter)
+		m.encrypt(pad, out, counter)
 		xor(auth, out)
 		inc(counter)
 	}
@@ -77,7 +77,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 
 	p := plaintext
 	for len(p) >= 16 {
-		c.encrypt(p[:16], out, counter)
+		m.encrypt(p[:16], out, counter)
 		p = p[16:]
 		xor(auth, out)
 		inc(counter)
@@ -89,14 +89,14 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 		}
 		n := copy(pad, p)
 		pad[n] = padByte
-		c.encrypt(pad, out, counter)
+		m.encrypt(pad, out, counter)
 		xor(auth, out)
 	}
 
 	// encrypt the nonce to get the final tag
 	tmp := []byte{tagNonce}
 	tmp = append(tmp, nonce[:15]...)
-	c.encrypt(tmp, auth, counter)
+	m.encrypt(tmp, auth, counter)
 
 	// encrypt the message
 	// using the auth tag as an IV
@@ -104,14 +104,14 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	counter[0] |= 0x80
 	p = plaintext
 	for len(p) >= 16 {
-		c.encrypt(nonce, out, counter)
+		m.encrypt(nonce, out, counter)
 		inc(counter)
 		xor(out, p[:16])
 		p = p[16:]
 		dst = append(dst, out...)
 	}
 	if len(p) > 0 {
-		c.encrypt(nonce, out, counter)
+		m.encrypt(nonce, out, counter)
 		xor(out, p)
 		dst = append(dst, out[:len(p)]...)
 	}
@@ -124,9 +124,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 
 // Open authenticates the ciphertext and additional data and returns the decrypted plaintext.
 func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
-	var c cipher
-
-	c.expand(m.key)
+	expandKey(m.key, m.subkey[:])
 
 	counter := make([]byte, 16)
 	out := make([]byte, 16)
@@ -148,14 +146,14 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	counter[0] |= 0x80
 	p := ciphertext
 	for len(p) >= blockSize {
-		c.encrypt(nonce, out, counter)
+		m.encrypt(nonce, out, counter)
 		inc(counter)
 		xor(out, p[:blockSize])
 		p = p[blockSize:]
 		dst = append(dst, out...)
 	}
 	if len(p) > 0 {
-		c.encrypt(nonce, out, counter)
+		m.encrypt(nonce, out, counter)
 		xor(out, p)
 		dst = append(dst, out[:len(p)]...)
 	}
@@ -167,7 +165,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	counter[0] = tagAdditionalData
 	p = dst[origLen:]
 	for len(additionalData) >= blockSize {
-		c.encrypt(additionalData[:blockSize], out, counter)
+		m.encrypt(additionalData[:blockSize], out, counter)
 		additionalData = additionalData[blockSize:]
 		xor(auth, out)
 		inc(counter)
@@ -179,7 +177,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 		}
 		n := copy(pad, additionalData)
 		pad[n] = padByte
-		c.encrypt(pad, out, counter)
+		m.encrypt(pad, out, counter)
 		xor(auth, out)
 		inc(counter)
 	}
@@ -193,7 +191,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 
 	p = dst[origLen:]
 	for len(p) >= blockSize {
-		c.encrypt(p[:blockSize], out, counter)
+		m.encrypt(p[:blockSize], out, counter)
 		p = p[blockSize:]
 		xor(auth, out)
 		inc(counter)
@@ -202,7 +200,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 		counter[0] |= tagPadding
 		n := copy(pad, p)
 		pad[n] = padByte
-		c.encrypt(pad, out, counter)
+		m.encrypt(pad, out, counter)
 		xor(auth, out)
 	}
 
@@ -210,13 +208,17 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	// XXX don't allocate
 	tmp := []byte{tagNonce}
 	tmp = append(tmp, nonce[:15]...)
-	c.encrypt(tmp, auth, counter)
+	m.encrypt(tmp, auth, counter)
 
 	if subtle.ConstantTimeCompare(auth, tag) == 0 {
 		return dst, errors.New("Open: invalid tag")
 	}
 
 	return dst, nil
+}
+
+func (m *mode) encrypt(msg, out, tweak []byte) {
+	encrypt(m.subkey[:], tweak, msg, out)
 }
 
 func inc(b []byte) {
