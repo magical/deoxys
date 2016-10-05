@@ -49,9 +49,8 @@ func expandKey(key []byte, subkey [][16]uint8) {
 	if len(key) != 16 {
 		panic("wrong size key")
 	}
-	//copy(tk1[:], key[0:16])
 	for i := range tk1 {
-		tk1[i] = key[swap(i)] // XXX don't swap
+		tk1[i] = key[i]
 	}
 	for i := range subkey {
 		subkey[i] = tk1
@@ -72,7 +71,7 @@ func expandKey(key []byte, subkey [][16]uint8) {
 func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 	var tw [16]uint8
 	for i := range tw {
-		tw[i] = tweak[swap(i)] // XXX don't swap
+		tw[i] = tweak[i]
 	}
 
 	// Initialize state
@@ -136,13 +135,7 @@ func mul3(x uint8) uint8 {
 }
 
 func h(p [16]uint8) [16]uint8 {
-	return [16]uint8{p[4], p[5], p[6], p[7], p[9], p[10], p[11], p[8],
-		p[14], p[15], p[12], p[13], p[3], p[0], p[1], p[2]}
 	return [16]uint8{
 		p[1], p[6], p[11], p[12], p[5], p[10], p[15], p[0],
 		p[9], p[14], p[3], p[4], p[13], p[2], p[7], p[8]}
-}
-
-func swap(v int) int {
-	return v>>2&3 | v&3<<2
 }
