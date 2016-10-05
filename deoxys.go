@@ -49,17 +49,20 @@ func expandKey(key []byte, subkey [][16]uint8) {
 	if len(key) != 16 {
 		panic("wrong size key")
 	}
-	copy(tk1[:], key[0:16])
+	//copy(tk1[:], key[0:16])
+	for i := range tk1 {
+		tk1[i] = key[swap(i)] // XXX don't swap
+	}
 	for i := range subkey {
 		subkey[i] = tk1
 		subkey[i][0] ^= 1
-		subkey[i][4] ^= 2
-		subkey[i][8] ^= 4
-		subkey[i][12] ^= 8
-		subkey[i][1] ^= rc[i]
+		subkey[i][1] ^= 2
+		subkey[i][2] ^= 4
+		subkey[i][3] ^= 8
+		subkey[i][4] ^= rc[i]
 		subkey[i][5] ^= rc[i]
-		subkey[i][9] ^= rc[i]
-		subkey[i][13] ^= rc[i]
+		subkey[i][6] ^= rc[i]
+		subkey[i][7] ^= rc[i]
 		for j, v := range h(tk1) {
 			tk1[j] = v<<1 | v>>7 | (v>>5)&1
 		}
@@ -68,18 +71,21 @@ func expandKey(key []byte, subkey [][16]uint8) {
 
 func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 	var tw [16]uint8
-	copy(tw[:], tweak) // XXX swap?
+	for i := range tw {
+		tw[i] = tweak[swap(i)] // XXX don't swap
+	}
 
 	// Initialize state
 	var s [16]uint8
 	for i := range s {
-		s[i] = in[swap(i)]
+		s[i] = in[i]
 	}
 
 	// Add tweakey
 	for i := range s {
 		s[i] ^= subkey[0][i] ^ tw[i]
 	}
+
 	for r := 1; r < len(subkey); r++ {
 		k := &subkey[r]
 
@@ -92,17 +98,17 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 		}
 
 		// shiftrows
-		s[4], s[5], s[6], s[7] = s[5], s[6], s[7], s[4]
-		s[8], s[9], s[10], s[11] = s[10], s[11], s[8], s[9]
-		s[12], s[13], s[14], s[15] = s[15], s[12], s[13], s[14]
+		s[1], s[5], s[9], s[13] = s[5], s[9], s[13], s[1]
+		s[2], s[6], s[10], s[14] = s[10], s[14], s[2], s[6]
+		s[3], s[7], s[11], s[15] = s[15], s[3], s[7], s[11]
 
 		// mixcolumns
-		for i := 0; i < 4; i++ {
-			s0, s1, s2, s3 := s[i], s[i+4], s[i+8], s[i+12]
+		for i := 0; i < 16; i += 4 {
+			s0, s1, s2, s3 := s[i], s[i+1], s[i+2], s[i+3]
 			s[i+0] = mul2(s0) ^ mul3(s1) ^ s2 ^ s3
-			s[i+4] = mul2(s1) ^ mul3(s2) ^ s3 ^ s0
-			s[i+8] = mul2(s2) ^ mul3(s3) ^ s0 ^ s1
-			s[i+12] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
+			s[i+1] = mul2(s1) ^ mul3(s2) ^ s3 ^ s0
+			s[i+2] = mul2(s2) ^ mul3(s3) ^ s0 ^ s1
+			s[i+3] = mul2(s3) ^ mul3(s0) ^ s1 ^ s2
 		}
 
 		// Add tweakey
@@ -112,7 +118,7 @@ func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
 	}
 
 	for i := range out {
-		out[i] = s[swap(i)]
+		out[i] = s[i]
 	}
 }
 
@@ -130,6 +136,8 @@ func mul3(x uint8) uint8 {
 }
 
 func h(p [16]uint8) [16]uint8 {
+	return [16]uint8{p[4], p[5], p[6], p[7], p[9], p[10], p[11], p[8],
+		p[14], p[15], p[12], p[13], p[3], p[0], p[1], p[2]}
 	return [16]uint8{
 		p[1], p[6], p[11], p[12], p[5], p[10], p[15], p[0],
 		p[9], p[14], p[3], p[4], p[13], p[2], p[7], p[8]}
