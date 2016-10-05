@@ -82,3 +82,29 @@ func mul(a, b uint) uint {
 	}
 	return r
 }
+
+func BenchmarkExpandKey(b *testing.B) {
+	b.StopTimer()
+	key := make([]byte, 16)
+	subkey := make([][16]byte, numRounds)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		expandKey(key, subkey)
+	}
+}
+
+func BenchmarkDeoxys(b *testing.B) {
+	b.StopTimer()
+	key := make([]byte, 16)
+	tweak := make([]byte, 16)
+	msg := make([]byte, 16)
+	out := make([]byte, 16)
+	subkey := make([][16]byte, numRounds)
+
+	expandKey(key, subkey)
+	b.SetBytes(int64(len(msg)))
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		encrypt(subkey, tweak, msg, out)
+	}
+}
