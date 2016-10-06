@@ -43,3 +43,16 @@ func TestRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkAEAD(b *testing.B) {
+	var m mode
+	m.key = []byte("16-byte password")
+	msg := []byte("A witty saying means nothing.")
+	nonce := make([]byte, 16)
+	dst := make([]byte, 0, len(msg)+TagSize)
+	b.SetBytes(int64(len(msg)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.Seal(dst, nonce, msg, nil)
+	}
+}

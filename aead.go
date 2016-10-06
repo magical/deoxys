@@ -3,7 +3,6 @@ package deoxys
 /*
 Potential optimizations:
 
-the third parameter of m.encrypt is always counter
 the output of m.encrypt is almost always immediately xored with something
 */
 
@@ -28,7 +27,8 @@ const (
 	TagSize   = 16
 )
 
-// Mode implements SCT (Synthetic Counter in Tweak) mode for Deoxys-BC
+// Mode implements the Deoxys-II authenticated encryption mode
+// with Deoxys-BC as the underlying tweakable block cipher
 type mode struct {
 	key     []byte
 	state   [16]uint8
@@ -48,46 +48,13 @@ func (m *mode) Overhead() int {
 func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	expandKey(m.key, m.subkey[:])
 
-	out := make([]byte, 16)
+	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
-	pad := make([]byte, 16)
 
-	// hash the additional data to get an auth tag
-	m.setCounter(tagAdditionalData)
-	for len(additionalData) >= 16 {
-		m.encrypt(additionalData[:16], out)
-		additionalData = additionalData[16:]
-		xor(auth, out)
-		m.inc()
-	}
-	if len(additionalData) > 0 {
-		m.setPadding()
-		n := copy(pad, additionalData)
-		pad[n] = padByte
-		m.encrypt(pad, out)
-		xor(auth, out)
-		m.inc()
-	}
-
-	// hash the message to get another auth tag
-	m.setCounter(tagMessage)
-	p := plaintext
-	for len(p) >= 16 {
-		m.encrypt(p[:16], out)
-		p = p[16:]
-		xor(auth, out)
-		m.inc()
-	}
-	if len(p) > 0 {
-		m.setPadding()
-		for i := range pad {
-			pad[i] = 0
-		}
-		n := copy(pad, p)
-		pad[n] = padByte
-		m.encrypt(pad, out)
-		xor(auth, out)
-	}
+	// hash the message and additional data
+	// to get the auth tag
+	m.hash(tagAdditionalData, additionalData, tmp, auth)
+	m.hash(tagMessage, plaintext, tmp, auth)
 
 	// encrypt the auth with the nonce as tweak to get the final tag
 	m.counter[0] = tagNonce
@@ -98,18 +65,18 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	// using the auth tag as an IV
 	copy(m.counter[0:], auth)
 	m.counter[0] |= 0x80
-	p = plaintext
+	p := plaintext
 	for len(p) >= 16 {
-		m.encrypt(nonce, out)
+		m.encrypt(nonce, tmp)
 		m.inc()
-		xor(out, p[:16])
+		xor(tmp, p[:16])
 		p = p[16:]
-		dst = append(dst, out...)
+		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
-		m.encrypt(nonce, out)
-		xor(out, p)
-		dst = append(dst, out[:len(p)]...)
+		m.encrypt(nonce, tmp)
+		xor(tmp, p)
+		dst = append(dst, tmp[:len(p)]...)
 	}
 
 	// append the tag
@@ -122,9 +89,8 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
 	expandKey(m.key, m.subkey[:])
 
-	out := make([]byte, 16)
+	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
-	pad := make([]byte, 16)
 
 	if len(ciphertext) < TagSize {
 		return dst, errors.New("Open: ciphertext too short")
@@ -141,56 +107,22 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	m.counter[0] |= 0x80
 	p := ciphertext
 	for len(p) >= blockSize {
-		m.encrypt(nonce, out)
+		m.encrypt(nonce, tmp)
 		m.inc()
-		xor(out, p[:blockSize])
+		xor(tmp, p[:blockSize])
 		p = p[blockSize:]
-		dst = append(dst, out...)
+		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
-		m.encrypt(nonce, out)
-		xor(out, p)
-		dst = append(dst, out[:len(p)]...)
+		m.encrypt(nonce, tmp)
+		xor(tmp, p)
+		dst = append(dst, tmp[:len(p)]...)
 	}
 
-	// hash the additional data to get an auth tag
-	m.setCounter(tagAdditionalData)
-	p = dst[origLen:]
-	for len(additionalData) >= blockSize {
-		m.encrypt(additionalData[:blockSize], out)
-		additionalData = additionalData[blockSize:]
-		xor(auth, out)
-		m.inc()
-	}
-	if len(additionalData) > 0 {
-		m.setPadding()
-		for i := range pad {
-			pad[i] = 0
-		}
-		n := copy(pad, additionalData)
-		pad[n] = padByte
-		m.encrypt(pad, out)
-		xor(auth, out)
-		m.inc()
-	}
-
-	// reset the counter
-	// hash the message to get another auth tag
-	m.setCounter(tagMessage)
-	p = dst[origLen:]
-	for len(p) >= blockSize {
-		m.encrypt(p[:blockSize], out)
-		p = p[blockSize:]
-		xor(auth, out)
-		m.inc()
-	}
-	if len(p) > 0 {
-		m.setPadding()
-		n := copy(pad, p)
-		pad[n] = padByte
-		m.encrypt(pad, out)
-		xor(auth, out)
-	}
+	// hash the message and additional data
+	// to get the auth tag
+	m.hash(tagAdditionalData, additionalData, tmp, auth)
+	m.hash(tagMessage, dst[origLen:], tmp, auth)
 
 	// encrypt the auth with the nonce as tweak to get the final tag
 	m.counter[0] = tagNonce
@@ -204,19 +136,31 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	return dst, nil
 }
 
-func (m *mode) encrypt(msg, out []byte) {
-	encryptBlockGo(m.subkey[:], m.counter[:], msg, out)
+func (m *mode) encrypt(in, out []byte) {
+	encryptBlockGo(m.subkey[:], m.counter[:], in, out)
 }
 
-func (m *mode) setCounter(tag uint8) {
+func (m *mode) hash(tag uint8, data, tmp, auth []byte) {
 	for i := range m.counter {
 		m.counter[i] = 0
 	}
 	m.counter[0] = tag
-}
-
-func (m *mode) setPadding() {
-	m.counter[0] |= tagPadding
+	for len(data) >= 16 {
+		m.encrypt(data[:16], tmp)
+		data = data[16:]
+		xor(auth, tmp)
+		m.inc()
+	}
+	if len(data) > 0 {
+		m.counter[0] |= tagPadding
+		for i := range tmp {
+			tmp[i] = 0
+		}
+		n := copy(tmp, data)
+		tmp[n] = padByte
+		m.encrypt(tmp, tmp)
+		xor(auth, tmp)
+	}
 }
 
 func (m *mode) inc() {
