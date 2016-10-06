@@ -29,17 +29,6 @@ var sbox = [256]uint8{
 
 var rc = [17]uint8{0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72}
 
-var permutations = [8][16]int8{
-	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-	{1, 6, 11, 12, 5, 10, 15, 0, 9, 14, 3, 4, 13, 2, 7, 8},
-	{6, 15, 4, 13, 10, 3, 8, 1, 14, 7, 12, 5, 2, 11, 0, 9},
-	{15, 8, 5, 2, 3, 12, 9, 6, 7, 0, 13, 10, 11, 4, 1, 14},
-	{8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7},
-	{9, 14, 3, 4, 13, 2, 7, 8, 1, 6, 11, 12, 5, 10, 15, 0},
-	{14, 7, 12, 5, 2, 11, 0, 9, 6, 15, 4, 13, 10, 3, 8, 1},
-	{7, 0, 13, 10, 11, 4, 1, 14, 15, 8, 5, 2, 3, 12, 9, 6},
-}
-
 const poly = 0x11b
 
 // ExpandKey expands a 16-byte key into a
@@ -62,7 +51,7 @@ func expandKey(key []byte, subkey [][16]uint8) {
 		subkey[i][5] ^= rc[i]
 		subkey[i][6] ^= rc[i]
 		subkey[i][7] ^= rc[i]
-		for j, v := range h(tk1) {
+		for j, v := range permute(tk1) {
 			tk1[j] = v<<1 | v>>7 | (v>>5)&1
 		}
 	}
@@ -89,7 +78,7 @@ func encryptBlockGo(subkey [][16]uint8, tweak, in, out []byte) {
 		k := &subkey[r]
 
 		// update tweak
-		tw = h(tw)
+		tw = permute(tw)
 
 		// subbytes
 		for i, v := range s {
@@ -134,7 +123,7 @@ func mul3(x uint8) uint8 {
 	return uint8(t)
 }
 
-func h(p [16]uint8) [16]uint8 {
+func permute(p [16]uint8) [16]uint8 {
 	return [16]uint8{
 		p[1], p[6], p[11], p[12], p[5], p[10], p[15], p[0],
 		p[9], p[14], p[3], p[4], p[13], p[2], p[7], p[8]}
