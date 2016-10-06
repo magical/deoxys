@@ -30,11 +30,21 @@ const (
 // Mode implements the Deoxys-II authenticated encryption mode
 // with Deoxys-BC as the underlying tweakable block cipher
 type mode struct {
-	key     []byte
 	state   [16]uint8
 	subkey  [numRounds][16]uint8
 	counter [16]uint8
 }
+
+func New(key []byte) *mode {
+	m := new(mode)
+	m.Reset(key)
+	return m
+}
+
+func (m *mode) Reset(key []byte) {
+	expandKey(key, m.subkey[:])
+}
+
 
 func (m *mode) NonceSize() int {
 	return NonceSize
@@ -46,8 +56,6 @@ func (m *mode) Overhead() int {
 
 // Seal encrypts and authenticates the plaintext
 func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
-	expandKey(m.key, m.subkey[:])
-
 	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
 
@@ -87,8 +95,6 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 
 // Open authenticates the ciphertext and additional data and returns the decrypted plaintext.
 func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
-	expandKey(m.key, m.subkey[:])
-
 	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
 
