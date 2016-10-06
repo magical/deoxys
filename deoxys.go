@@ -68,7 +68,7 @@ func expandKey(key []byte, subkey [][16]uint8) {
 	}
 }
 
-func encrypt(subkey [][16]uint8, tweak, in, out []byte) {
+func encryptBlockGo(subkey [][16]uint8, tweak, in, out []byte) {
 	var tw [16]uint8
 	for i := range tw {
 		tw[i] = tweak[i]

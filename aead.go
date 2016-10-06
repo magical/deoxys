@@ -205,7 +205,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 }
 
 func (m *mode) encrypt(msg, out []byte) {
-	encrypt(m.subkey[:], m.counter[:], msg, out)
+	encryptBlockGo(m.subkey[:], m.counter[:], msg, out)
 }
 
 func (m *mode) setCounter(tag uint8) {

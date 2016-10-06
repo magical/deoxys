@@ -13,7 +13,7 @@ func TestDeoxys(t *testing.T) {
 	subkey := make([][16]byte, numRounds)
 
 	expandKey(key, subkey)
-	encrypt(subkey, tweak, msg, out)
+	encryptBlockGo(subkey, tweak, msg, out)
 
 	actual := hex.EncodeToString(out)
 	expected := "80b2311e3129c07c386da385e79a4886"
@@ -22,7 +22,7 @@ func TestDeoxys(t *testing.T) {
 	}
 
 	msg[1] = 0xff
-	encrypt(subkey, tweak, msg, out)
+	encryptBlockGo(subkey, tweak, msg, out)
 
 	actual = hex.EncodeToString(out)
 	expected = "1bdfc9a6c16149ac337d959724c4142b"
@@ -105,6 +105,6 @@ func BenchmarkDeoxys(b *testing.B) {
 	b.SetBytes(int64(len(msg)))
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		encrypt(subkey, tweak, msg, out)
+		encryptBlockGo(subkey, tweak, msg, out)
 	}
 }
