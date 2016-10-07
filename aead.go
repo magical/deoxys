@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	tagNonce          = 1
-	tagAdditionalData = 2
-	tagPadding        = 4
-	tagMessage        = 8
+	tagNonce          = 1 << 4
+	tagAdditionalData = 2 << 4
+	tagPadding        = 4 << 4
+	tagMessage        = 8 << 4
 )
 
 const padByte byte = 0x80
@@ -44,7 +44,6 @@ func New(key []byte) *mode {
 func (m *mode) Reset(key []byte) {
 	expandKey(key, m.subkey[:])
 }
-
 
 func (m *mode) NonceSize() int {
 	return NonceSize
