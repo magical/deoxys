@@ -6,13 +6,12 @@ GLOBL permutation<>(SB), (RODATA|NOPTR), $16
 
 TEXT ·hasAESNI(SB), NOSPLIT, $0-1
     MOVQ runtime·cpuid_ecx(SB), CX
-
     MOVQ CX, AX
+
     SHRQ $25, AX // aes (aesenc)
-
     SHRQ $9, CX // ssse3 (pshufb)
-    ORQ CX, AX
 
+    ANDQ CX, AX
     ANDQ $1, AX
     MOVB AX, ret+0(FP)
     RET
