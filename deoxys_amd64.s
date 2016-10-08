@@ -4,6 +4,19 @@ DATA permutation<>+0(SB)/8, $0x000f0a050c0b0601
 DATA permutation<>+8(SB)/8, $0x0807020d04030e09
 GLOBL permutation<>(SB), (RODATA|NOPTR), $16
 
+TEXT ·hasAESNI(SB), NOSPLIT, $0-1
+    MOVQ runtime·cpuid_ecx(SB), CX
+
+    MOVQ CX, AX
+    SHRQ $25, AX // aes (aesenc)
+
+    SHRQ $9, CX // ssse3 (pshufb)
+    ORQ CX, AX
+
+    ANDQ $1, AX
+    MOVB AX, ret+0(FP)
+    RET
+
 TEXT ·encryptBlockAsm(SB), NOSPLIT, $0-96
     // TODO check bounds of in, out, and tweak?
 

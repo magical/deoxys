@@ -142,7 +142,7 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 }
 
 func (m *mode) encrypt(in, out []byte) {
-	encryptBlockGo(m.subkey[:], m.counter[:], in, out)
+	encryptBlock(m.subkey[:], m.counter[:], in, out)
 }
 
 func (m *mode) hash(tag uint8, data, tmp, auth []byte) {
