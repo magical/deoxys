@@ -14,7 +14,7 @@ func TestAEAD(t *testing.T) {
 	nonce := make([]byte, 16)
 
 	c0 := m.Seal(nil, nonce, msg, nil)
-	expected := "2a3e3e03106e1737af86c54dba547985a9367fc6c3cf75e4d06944c4f86515283c66c908156cbbf6205ba1d354"
+	expected := "1af49030fb15049f74de9e6128a0bc52c4ad781449d74e969c03143a07611b478d4601b26ac0136539520955d0"
 	if hex.EncodeToString(c0) != expected {
 		t.Errorf("Seal(%q) = %x, want %s", msg, c0, expected)
 	}

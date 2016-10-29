@@ -55,7 +55,7 @@ func expandKey(key []byte, subkey [][16]uint8) {
 		subkey[i][6] ^= rc[i]
 		subkey[i][7] ^= rc[i]
 		for j, v := range permute(tk1) {
-			tk1[j] = v<<1 | v>>7 | (v>>5)&1
+			tk1[j] = v<<1 | (v>>7 ^ (v>>5)&1)
 		}
 	}
 }
@@ -128,6 +128,7 @@ func mul3(x uint8) uint8 {
 
 func permute(p [16]uint8) [16]uint8 {
 	return [16]uint8{
-		p[1], p[6], p[11], p[12], p[5], p[10], p[15], p[0],
-		p[9], p[14], p[3], p[4], p[13], p[2], p[7], p[8]}
+		p[7], p[0], p[13], p[10], p[11], p[4], p[1], p[14],
+		p[15], p[8], p[5], p[2], p[3], p[12], p[9], p[6],
+	}
 }

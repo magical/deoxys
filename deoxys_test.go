@@ -18,8 +18,10 @@ func TestDeoxys(t *testing.T) {
 	actual := hex.EncodeToString(out)
 	expected := "80b2311e3129c07c386da385e79a4886"
 	if actual != expected {
-		t.Errorf("got %s, expected %s", actual, expected)
+		t.Errorf("0: got %s, expected %s", actual, expected)
 	}
+
+	//
 
 	msg[1] = 0xff
 	encryptBlock(subkey, tweak, msg, out)
@@ -27,7 +29,22 @@ func TestDeoxys(t *testing.T) {
 	actual = hex.EncodeToString(out)
 	expected = "1bdfc9a6c16149ac337d959724c4142b"
 	if actual != expected {
-		t.Errorf("got %s, expected %s", actual, expected)
+		t.Errorf("0xff: got %s, expected %s", actual, expected)
+	}
+
+	//
+
+	for i := 0; i < 16; i++ {
+		key[i] = uint8(i)
+		tweak[i] = uint8(i)
+		msg[i] = uint8(i)
+	}
+	expandKey(key, subkey)
+	encryptBlock(subkey, tweak, msg, out)
+	actual = hex.EncodeToString(out)
+	expected = "60c6427871d63192c2798e8d1f3249ff"
+	if actual != expected {
+		t.Errorf("sequential: got %s, expected %s", actual, expected)
 	}
 }
 
