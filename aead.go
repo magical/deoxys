@@ -12,10 +12,10 @@ import (
 )
 
 const (
+	tagMessage        = 0 << 4
 	tagNonce          = 1 << 4
 	tagAdditionalData = 2 << 4
 	tagPadding        = 4 << 4
-	tagMessage        = 8 << 4
 )
 
 const padByte byte = 0x80
