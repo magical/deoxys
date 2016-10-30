@@ -73,15 +73,17 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	copy(m.counter[0:], auth)
 	m.counter[0] |= 0x80
 	p := plaintext
+	var nonce0 = make([]byte, 16)
+	copy(nonce0[1:], nonce)
 	for len(p) >= 16 {
-		m.encrypt(nonce, tmp)
+		m.encrypt(nonce0, tmp)
 		m.inc()
 		xor(tmp, p[:16])
 		p = p[16:]
 		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
-		m.encrypt(nonce, tmp)
+		m.encrypt(nonce0, tmp)
 		xor(tmp, p)
 		dst = append(dst, tmp[:len(p)]...)
 	}
@@ -111,15 +113,17 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	copy(m.counter[0:], tag)
 	m.counter[0] |= 0x80
 	p := ciphertext
+	var nonce0 = make([]byte, 16)
+	copy(nonce0[1:], nonce)
 	for len(p) >= blockSize {
-		m.encrypt(nonce, tmp)
+		m.encrypt(nonce0, tmp)
 		m.inc()
 		xor(tmp, p[:blockSize])
 		p = p[blockSize:]
 		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
-		m.encrypt(nonce, tmp)
+		m.encrypt(nonce0, tmp)
 		xor(tmp, p)
 		dst = append(dst, tmp[:len(p)]...)
 	}
