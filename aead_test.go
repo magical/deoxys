@@ -11,18 +11,10 @@ func TestAEAD(t *testing.T) {
 		msg      string
 		expected string
 	}{
-		{
-			msg:      "",
-			expected: "cb65a26fa783f43e3a521222528f0784",
-		},
-		{
-			msg:      "A witty saying means nothing.",
-			expected: "1af49030fb15049f74de9e6128a0bc52c4ad781449d74e969c03143a07611b478d4601b26ac0136539520955d0",
-		},
-		{
-			msg:      "A witty saying means nothing",
-			expected: "f2dd5a749ef9693679e03f81466ecfb98b653fb37a46fdd5d1823664cf3e9afd41204283ea157580fa13adbe",
-		},
+		{"", "cb65a26fa783f43e3a521222528f0784"},
+		{"A witty saying means nothing.", "1af49030fb15049f74de9e6128a0bc52c4ad781449d74e969c03143a07611b478d4601b26ac0136539520955d0"},
+		{"A witty saying means nothing", "f2dd5a749ef9693679e03f81466ecfb98b653fb37a46fdd5d1823664cf3e9afd41204283ea157580fa13adbe"},
+		{"'Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe;\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.", "cb6633b2e730db0d16a0a8e03387c9ea129474dfba9078841d91fdf0ef67b2dee95f12d3bd4885bd5ce020d49c04a81e4015f6e52c66601d3d61f1f8b41528ba8321432ecbfb8a8d57ec96e03ec0aaeef024265715bc998579de2c16cebf79c8959c01ce73f0ad1fd3541f51d1145d7c6ef274666f567c6d1d0b4b4c6046d583007d73d28e0c08ce0a8c0f64f2503e"},
 	}
 
 	key := []byte("16-byte password")
@@ -99,7 +91,10 @@ func TestRoundTrip(t *testing.T) {
 		"A witty saying means nothing.",
 		"Test",
 		"16-byte message.",
-		"32-byte message.thirty-two bytes",
+		"this message is almost 32 bytes",
+		"this message is exactly 32 bytes",
+		"this message is exactly forty-five bytes long",
+		"'Twas brillig, and the slithy toves\nDid gyre and gimble in the wabe;\nAll mimsy were the borogoves,\nAnd the mome raths outgrabe.",
 	}
 	for _, s := range strings {
 		msg := []byte(s)

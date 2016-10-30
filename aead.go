@@ -75,14 +75,33 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	p := plaintext
 	var nonce0 = make([]byte, 16)
 	copy(nonce0[1:], nonce)
-	for len(p) >= 16 {
+	var i int64
+	for i = 0; len(p) >= 16; i++ {
+		m.counter[8] = auth[8] ^ uint8(i>>56)
+		m.counter[9] = auth[9] ^ uint8(i>>48)
+		m.counter[10] = auth[10] ^ uint8(i>>40)
+		m.counter[11] = auth[11] ^ uint8(i>>32)
+		m.counter[12] = auth[12] ^ uint8(i>>24)
+		m.counter[13] = auth[13] ^ uint8(i>>16)
+		m.counter[14] = auth[14] ^ uint8(i>>8)
+		m.counter[15] = auth[15] ^ uint8(i)
+
 		m.encrypt(nonce0, tmp)
-		m.inc()
+
 		xor(tmp, p[:16])
 		p = p[16:]
 		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
+		m.counter[8] = auth[8] ^ uint8(i>>56)
+		m.counter[9] = auth[9] ^ uint8(i>>48)
+		m.counter[10] = auth[10] ^ uint8(i>>40)
+		m.counter[11] = auth[11] ^ uint8(i>>32)
+		m.counter[12] = auth[12] ^ uint8(i>>24)
+		m.counter[13] = auth[13] ^ uint8(i>>16)
+		m.counter[14] = auth[14] ^ uint8(i>>8)
+		m.counter[15] = auth[15] ^ uint8(i)
+
 		m.encrypt(nonce0, tmp)
 		xor(tmp, p)
 		dst = append(dst, tmp[:len(p)]...)
@@ -115,14 +134,32 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	p := ciphertext
 	var nonce0 = make([]byte, 16)
 	copy(nonce0[1:], nonce)
-	for len(p) >= blockSize {
+	var i uint64
+	for i = 0; len(p) >= blockSize; i++ {
+		m.counter[8] = tag[8] ^ uint8(i>>56)
+		m.counter[9] = tag[9] ^ uint8(i>>48)
+		m.counter[10] = tag[10] ^ uint8(i>>40)
+		m.counter[11] = tag[11] ^ uint8(i>>32)
+		m.counter[12] = tag[12] ^ uint8(i>>24)
+		m.counter[13] = tag[13] ^ uint8(i>>16)
+		m.counter[14] = tag[14] ^ uint8(i>>8)
+		m.counter[15] = tag[15] ^ uint8(i)
+
 		m.encrypt(nonce0, tmp)
-		m.inc()
 		xor(tmp, p[:blockSize])
 		p = p[blockSize:]
 		dst = append(dst, tmp...)
 	}
 	if len(p) > 0 {
+		m.counter[8] = tag[8] ^ uint8(i>>56)
+		m.counter[9] = tag[9] ^ uint8(i>>48)
+		m.counter[10] = tag[10] ^ uint8(i>>40)
+		m.counter[11] = tag[11] ^ uint8(i>>32)
+		m.counter[12] = tag[12] ^ uint8(i>>24)
+		m.counter[13] = tag[13] ^ uint8(i>>16)
+		m.counter[14] = tag[14] ^ uint8(i>>8)
+		m.counter[15] = tag[15] ^ uint8(i)
+
 		m.encrypt(nonce0, tmp)
 		xor(tmp, p)
 		dst = append(dst, tmp[:len(p)]...)
