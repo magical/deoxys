@@ -27,34 +27,34 @@ const (
 	TagSize   = 16
 )
 
-// Mode implements the Deoxys-II authenticated encryption mode
+// AEAD implements the Deoxys-II authenticated encryption mode
 // with Deoxys-BC as the underlying tweakable block cipher
-type mode struct {
+type AEAD struct {
 	state   [16]uint8
 	subkey  [numRounds][16]uint8
 	counter [16]uint8
 }
 
-func New(key []byte) *mode {
-	m := new(mode)
+func New(key []byte) *AEAD {
+	m := new(AEAD)
 	m.Reset(key)
 	return m
 }
 
-func (m *mode) Reset(key []byte) {
+func (m *AEAD) Reset(key []byte) {
 	expandKey(key, m.subkey[:])
 }
 
-func (m *mode) NonceSize() int {
+func (m *AEAD) NonceSize() int {
 	return NonceSize
 }
 
-func (m *mode) Overhead() int {
+func (m *AEAD) Overhead() int {
 	return TagSize
 }
 
 // Seal encrypts and authenticates the plaintext
-func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
+func (m *AEAD) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
 
@@ -114,7 +114,7 @@ func (m *mode) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 }
 
 // Open authenticates the ciphertext and additional data and returns the decrypted plaintext.
-func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
+func (m *AEAD) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
 	tmp := make([]byte, 16)
 	auth := make([]byte, TagSize)
 
@@ -182,11 +182,11 @@ func (m *mode) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, erro
 	return dst, nil
 }
 
-func (m *mode) encrypt(in, out []byte) {
+func (m *AEAD) encrypt(in, out []byte) {
 	encryptBlock(m.subkey[:], m.counter[:], in, out)
 }
 
-func (m *mode) hash(tag uint8, data, tmp, auth []byte) {
+func (m *AEAD) hash(tag uint8, data, tmp, auth []byte) {
 	for i := range m.counter {
 		m.counter[i] = 0
 	}
@@ -209,7 +209,7 @@ func (m *mode) hash(tag uint8, data, tmp, auth []byte) {
 	}
 }
 
-func (m *mode) inc() {
+func (m *AEAD) inc() {
 	for i := len(m.counter) - 1; i >= 0; i-- {
 		m.counter[i]++
 		if m.counter[i] != 0 {
