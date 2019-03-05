@@ -23,7 +23,7 @@ const padByte byte = 0x80
 const (
 	blockSize = 16
 	numRounds = 15
-	NonceSize = 16 // 15?
+	NonceSize = 15
 	TagSize   = 16
 )
 

@@ -21,7 +21,7 @@ func TestAEAD(t *testing.T) {
 	m := New(key)
 	for _, tt := range messages {
 		msg := []byte(tt.msg)
-		nonce := make([]byte, 16)
+		nonce := make([]byte, 15)
 
 		c0 := m.Seal(nil, nonce, msg, nil)
 		if hex.EncodeToString(c0) != tt.expected {
@@ -36,14 +36,14 @@ func TestAEAD(t *testing.T) {
 	}
 
 	m = New(ones(16))
-	c2 := m.Seal(nil, ones(16), ones(16), ones(16))
+	c2 := m.Seal(nil, ones(15), ones(16), ones(16))
 	expected := "208a09bb8bbe926a4ab279558a73e9f5b7faa510395cc8616c8647834f07a7b0"
 	if hex.EncodeToString(c2) != expected {
 		t.Errorf("Seal(all ones) = %x, want %s", c2, expected)
 	}
 
 	m = New(seq(16))
-	c3 := m.Seal(nil, seq(16), seq(16), seq(16))
+	c3 := m.Seal(nil, seq(15), seq(16), seq(16))
 	expected = "b69e98eca406bb3dd32243a8a7eed7591652f9313719cdc264e4949437e2ffd7"
 	if hex.EncodeToString(c3) != expected {
 		t.Errorf("Seal(seq) = %x, want %s", c3, expected)
@@ -66,7 +66,7 @@ func seq(n int) []byte {
 func TestAEADReset(t *testing.T) {
 	msg := []byte("A witty saying means nothing.")
 	key := []byte("16-byte password")
-	nonce := make([]byte, 16)
+	nonce := make([]byte, 15)
 	m := New(key)
 
 	c0 := m.Seal(nil, nonce, msg, nil)
@@ -98,7 +98,7 @@ func TestRoundTrip(t *testing.T) {
 	}
 	for _, s := range strings {
 		msg := []byte(s)
-		nonce := make([]byte, 16)
+		nonce := make([]byte, 15)
 		ciphertext := m.Seal(nil, nonce, msg, nil)
 		plaintext, err := m.Open(nil, nonce, ciphertext, nil)
 		if !bytes.Equal(plaintext, msg) {
@@ -116,7 +116,7 @@ func TestRoundTrip(t *testing.T) {
 func BenchmarkAEAD(b *testing.B) {
 	m := New([]byte("16-byte password"))
 	msg := []byte("A witty saying means nothing.")
-	nonce := make([]byte, 16)
+	nonce := make([]byte, 15)
 	dst := make([]byte, 0, len(msg)+TagSize)
 	b.SetBytes(int64(len(msg)))
 	b.ResetTimer()
