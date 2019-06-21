@@ -1,7 +1,7 @@
 #include "textflag.h"
 
-DATA permutation<>+0(SB)/8, $0x0e01040b0a0d0007
-DATA permutation<>+8(SB)/8, $0x06090c030205080f
+DATA permutation<>+0(SB)/8, $0x000f0a050c0b0601
+DATA permutation<>+8(SB)/8, $0x0807020d04030e09
 GLOBL permutation<>(SB), (RODATA|NOPTR), $16
 
 TEXT ·encryptBlockAsm(SB), NOSPLIT, $0-96
