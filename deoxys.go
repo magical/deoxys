@@ -1,9 +1,10 @@
 // Package deoxys implements the Deoxys-BC block cipher
 // and Deoxys-II nonce-misuse-resistant authenticated encryption mode.
 //
-// Deoxys 1.4 Specification:
+// Deoxys 1.43 Specification:
 //
-//     http://www1.spms.ntu.edu.sg/~syllab/m/images/8/87/Deoxys.v1.4.pdf
+//    https://sites.google.com/view/deoxyscipher
+//    https://drive.google.com/file/d/1IUELtBUdp6vrY8uhxHhycsGuSH_XlpMJ/view
 //
 package deoxys
 
@@ -128,7 +129,7 @@ func mul3(x uint8) uint8 {
 
 func permute(p [16]uint8) [16]uint8 {
 	return [16]uint8{
-		p[7], p[0], p[13], p[10], p[11], p[4], p[1], p[14],
-		p[15], p[8], p[5], p[2], p[3], p[12], p[9], p[6],
+		p[1], p[6], p[11], p[12], p[5], p[10], p[15], p[0],
+		p[9], p[14], p[3], p[4], p[13], p[2], p[7], p[8],
 	}
 }
