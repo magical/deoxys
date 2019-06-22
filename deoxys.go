@@ -1,9 +1,10 @@
 // Package deoxys implements the Deoxys-BC block cipher
 // and Deoxys-II nonce-misuse-resistant authenticated encryption mode.
 //
-// Deoxys 1.4 Specification:
+// Deoxys 1.43 Specification:
 //
-//     http://www1.spms.ntu.edu.sg/~syllab/m/images/8/87/Deoxys.v1.4.pdf
+//    https://sites.google.com/view/deoxyscipher
+//    https://drive.google.com/file/d/1IUELtBUdp6vrY8uhxHhycsGuSH_XlpMJ/view
 //
 package deoxys
 
