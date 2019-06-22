@@ -42,7 +42,7 @@ func TestDeoxys(t *testing.T) {
 	expandKey(key, subkey)
 	encryptBlock(subkey, tweak, msg, out)
 	actual = hex.EncodeToString(out)
-	expected = "60c6427871d63192c2798e8d1f3249ff"
+	expected = "a9005fac24fcfc185fc5c93fb8550475"
 	if actual != expected {
 		t.Errorf("sequential: got %s, expected %s", actual, expected)
 	}
